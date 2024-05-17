@@ -1,0 +1,204 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+int **allocate_matrix(int n) {
+    int **matrix = (int **)malloc(n * sizeof(int *));
+    for (int i = 0; i < n; i++) {
+        matrix[i] = (int *)malloc(n * sizeof(int));
+    }
+    return matrix;
+}
+
+void free_matrix(int **matrix, int n) {
+    for (int i = 0; i < n; i++) {
+        free(matrix[i]);
+    }
+    free(matrix);
+}
+
+void add_matrix(int **a, int **b, int **result, int n) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            result[i][j] = a[i][j] + b[i][j];
+        }
+    }
+}
+
+void subtract_matrix(int **a, int **b, int **result, int n) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            result[i][j] = a[i][j] - b[i][j];
+        }
+    }
+}
+
+void strassen(int **a, int **b, int **c, int n) {
+    if (n == 1) {
+        c[0][0] = a[0][0] * b[0][0];
+        return;
+    }
+
+    int new_size = n / 2;
+    int **a11 = allocate_matrix(new_size);
+    int **a12 = allocate_matrix(new_size);
+    int **a21 = allocate_matrix(new_size);
+    int **a22 = allocate_matrix(new_size);
+    int **b11 = allocate_matrix(new_size);
+    int **b12 = allocate_matrix(new_size);
+    int **b21 = allocate_matrix(new_size);
+    int **b22 = allocate_matrix(new_size);
+
+    int **c11 = allocate_matrix(new_size);
+    int **c12 = allocate_matrix(new_size);
+    int **c21 = allocate_matrix(new_size);
+    int **c22 = allocate_matrix(new_size);
+
+    int **p1 = allocate_matrix(new_size);
+    int **p2 = allocate_matrix(new_size);
+    int **p3 = allocate_matrix(new_size);
+    int **p4 = allocate_matrix(new_size);
+    int **p5 = allocate_matrix(new_size);
+    int **p6 = allocate_matrix(new_size);
+    int **p7 = allocate_matrix(new_size);
+
+    int **tempA = allocate_matrix(new_size);
+    int **tempB = allocate_matrix(new_size);
+
+    // Dividing matrices into 4 sub-matrices
+    for (int i = 0; i < new_size; i++) {
+        for (int j = 0; j < new_size; j++) {
+            a11[i][j] = a[i][j];
+            a12[i][j] = a[i][j + new_size];
+            a21[i][j] = a[i + new_size][j];
+            a22[i][j] = a[i + new_size][j + new_size];
+
+            b11[i][j] = b[i][j];
+            b12[i][j] = b[i][j + new_size];
+            b21[i][j] = b[i + new_size][j];
+            b22[i][j] = b[i + new_size][j + new_size];
+        }
+    }
+
+    // p1 = (a11 + a22) * (b11 + b22)
+    add_matrix(a11, a22, tempA, new_size);
+    add_matrix(b11, b22, tempB, new_size);
+    strassen(tempA, tempB, p1, new_size);
+
+    // p2 = (a21 + a22) * b11
+    add_matrix(a21, a22, tempA, new_size);
+    strassen(tempA, b11, p2, new_size);
+
+    // p3 = a11 * (b12 - b22)
+    subtract_matrix(b12, b22, tempB, new_size);
+    strassen(a11, tempB, p3, new_size);
+
+    // p4 = a22 * (b21 - b11)
+    subtract_matrix(b21, b11, tempB, new_size);
+    strassen(a22, tempB, p4, new_size);
+
+    // p5 = (a11 + a12) * b22
+    add_matrix(a11, a12, tempA, new_size);
+    strassen(tempA, b22, p5, new_size);
+
+    // p6 = (a21 - a11) * (b11 + b12)
+    subtract_matrix(a21, a11, tempA, new_size);
+    add_matrix(b11, b12, tempB, new_size);
+    strassen(tempA, tempB, p6, new_size);
+
+    // p7 = (a12 - a22) * (b21 + b22)
+    subtract_matrix(a12, a22, tempA, new_size);
+    add_matrix(b21, b22, tempB, new_size);
+    strassen(tempA, tempB, p7, new_size);
+
+    // Calculating c11, c12, c21, c22
+    add_matrix(p1, p4, c11, new_size); // c11 = p1 + p4
+    subtract_matrix(c11, p5, c11, new_size); // c11 = c11 - p5
+    add_matrix(c11, p7, c11, new_size); // c11 = c11 + p7
+
+    add_matrix(p3, p5, c12, new_size); // c12 = p3 + p5
+
+    add_matrix(p2, p4, c21, new_size); // c21 = p2 + p4
+
+    add_matrix(p1, p3, c22, new_size); // c22 = p1 + p3
+    subtract_matrix(c22, p2, c22, new_size); // c22 = c22 - p2
+    add_matrix(c22, p6, c22, new_size); // c22 = c22 + p6
+    // Grouping the results into the output matrix c
+    for (int i = 0; i < new_size; i++) {
+        for (int j = 0; j < new_size; j++) {
+            c[i][j] = c11[i][j];
+            c[i][j + new_size] = c12[i][j];
+            c[i + new_size][j] = c21[i][j];
+            c[i + new_size][j + new_size] = c22[i][j];
+        }
+    }
+
+    // Freeing all dynamically allocated memory
+    free_matrix(a11, new_size);
+    free_matrix(a12, new_size);
+    free_matrix(a21, new_size);
+    free_matrix(a22, new_size);
+    free_matrix(b11, new_size);
+    free_matrix(b12, new_size);
+    free_matrix(b21, new_size);
+    free_matrix(b22, new_size);
+    free_matrix(c11, new_size);
+    free_matrix(c12, new_size);
+    free_matrix(c21, new_size);
+    free_matrix(c22, new_size);
+    free_matrix(p1, new_size);
+    free_matrix(p2, new_size);
+    free_matrix(p3, new_size);
+    free_matrix(p4, new_size);
+    free_matrix(p5, new_size);
+    free_matrix(p6, new_size);
+    free_matrix(p7, new_size);
+    free_matrix(tempA, new_size);
+    free_matrix(tempB, new_size);
+}
+
+int main() {
+    int n = 4; // Size of the matrix (must be a power of 2)
+    int **a = allocate_matrix(n);
+    int **b = allocate_matrix(n);
+    int **c = allocate_matrix(n);
+
+    int a_values[4][4] = {
+        {0, 1, 2, 3},
+        {4, 5, 6, 7},
+        {8, 9, 10, 11},
+        {12, 13, 14, 15}
+    };
+    
+    int b_values[4][4] = {
+        {0, 4, 8, 12},
+        {1, 5, 9, 13},
+        {2, 6, 10, 14},
+        {3, 7, 11, 15}
+    };
+
+    // Copy values to matrices a and b
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            a[i][j] = a_values[i][j];
+            b[i][j] = b_values[i][j];
+        }
+    }
+
+    strassen(a, b, c, n);
+
+    // Output the resulting matrix
+    printf("Resulting Matrix:\n");
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            printf("%d ", c[i][j]);
+        }
+        printf("\n");
+    }
+
+    // Free all matrices
+    free_matrix(a, n);
+    free_matrix(b, n);
+    free_matrix(c, n);
+
+    return 0;
+}

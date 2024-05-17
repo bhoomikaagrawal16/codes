@@ -1,0 +1,58 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
+// Function to find the minimum of two numbers
+int min(int x, int y) {
+    return (x < y) ? x : y;
+}
+
+int tsp(int V, int graph[][V], int mask, int pos, int dp[][V]) {
+       if (mask == (1 << V) - 1) {
+        return graph[pos][0];
+    }
+
+    if (dp[mask][pos] != -1) {
+        return dp[mask][pos];
+    }
+
+    int ans = INT_MAX;
+
+  
+    for (int city = 0; city < V; city++) {
+        if (!(mask & (1 << city))) {
+            int new_mask = mask | (1 << city);
+            ans = min(ans, graph[pos][city] + tsp(V, graph, new_mask, city, dp));
+        }
+    }
+
+
+    return dp[mask][pos] = ans;
+}
+
+int main() {
+    int V;
+    printf("Enter the number of vertices: ");
+    scanf("%d", &V);
+
+    int graph[V][V];
+    printf("Enter the cost matrix (%d x %d):\n", V, V);
+    for (int i = 0; i < V; i++) {
+        for (int j = 0; j < V; j++) {
+            scanf("%d", &graph[i][j]);
+        }
+    }
+
+    int dp[1 << V][V];
+    for (int i = 0; i < (1 << V); i++) {
+        for (int j = 0; j < V; j++) {
+            dp[i][j] = -1;
+        }
+    }
+
+    int ans = tsp(V, graph, 1, 0, dp); 
+
+    printf("Minimum cost of the Travelling Salesman Problem: %d\n", ans);
+
+    return 0;
+}
